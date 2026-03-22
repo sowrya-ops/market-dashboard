@@ -380,26 +380,12 @@ async function fetchMarkets(){
     }
   } catch(e){ dset('gold-api.com (metals)','fail',e.message); }
 
-  // 2c. Crude oil fallback — corsproxy + Yahoo Finance
-  if(!data.crude){
-    try {
-      var crProxies = [
-        'https://corsproxy.io/?url='+encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/CL=F?interval=1d&range=1d'),
-        'https://api.allorigins.win/raw?url='+encodeURIComponent('https://query2.finance.yahoo.com/v8/finance/chart/CL=F?interval=1d&range=1d'),
-      ];
-      for(var pi=0;pi<crProxies.length;pi++){
-        try{
-          var crr=await fetch(crProxies[pi],{cache:'no-store'});
-          if(crr.ok){
-            var crd=await crr.json();
-            var crp=crd.chart&&crd.chart.result&&crd.chart.result[0]&&crd.chart.result[0].meta&&crd.chart.result[0].meta.regularMarketPrice;
-            if(crp){data.crude={price:fmtU(crp,2),change:''};dset('Crude oil','ok','$'+crp);break;}
-          }
-        }catch(e2){}
-      }
-      if(!data.crude) dset('Crude oil','warn','unavailable');
-    } catch(e){ dset('Crude oil','warn',e.message); }
+  // 2c. Crude oil — fetched server-side via /api/prices
+  if(!data.crude && window._crudeUSD && window._crudeUSD>0){
+    data.crude={price:fmtU(window._crudeUSD,2),change:''};
+    dset('Crude oil','ok','$'+window._crudeUSD);
   }
+  if(!data.crude) dset('Crude oil','warn','unavailable');
 
   // 2d. Derive India metals from gold/silver USD + USD/INR
   if(goldUSD && usdInrV){
@@ -531,6 +517,11 @@ async function fetchCoinSwitch(){
     dset('Fuel Bengaluru','ok','⛽₹'+data.petrolBLR+' 🛢₹'+data.dieselBLR);
   } else {
     dset('Fuel Bengaluru','warn','no price');
+  }
+  // Crude oil from serverless response
+  if(data.crudeUSD && data.crudeUSD>0){
+    window._crudeUSD = data.crudeUSD;
+    dset('Crude oil (serverless)','ok','$'+data.crudeUSD);
   }
 }
 

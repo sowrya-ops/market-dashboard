@@ -135,6 +135,23 @@ async function fetchBangaloreFuel() {
   return results;
 }
 
+// Fetch WTI crude oil price server-side via Yahoo Finance
+async function fetchCrudeOil() {
+  const urls = [
+    'https://query1.finance.yahoo.com/v8/finance/chart/CL=F?interval=1d&range=1d',
+    'https://query2.finance.yahoo.com/v8/finance/chart/CL=F?interval=1d&range=1d',
+  ];
+  for (const url of urls) {
+    try {
+      const body = await fetchPage(url);
+      const d = JSON.parse(body);
+      const price = d?.chart?.result?.[0]?.meta?.regularMarketPrice;
+      if (price && price > 20) return price;
+    } catch(e) {}
+  }
+  return null;
+}
+
 export default async function handler(req, res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -165,6 +182,10 @@ export default async function handler(req, res) {
     fetchBangaloreFuel().then(fuel => {
       result.petrolBLR = fuel.petrol;
       result.dieselBLR = fuel.diesel;
+    }),
+    // Crude oil via Yahoo Finance server-side
+    fetchCrudeOil().then(price => {
+      result.crudeUSD = price;
     }),
   ]);
 
