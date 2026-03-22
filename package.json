@@ -1,0 +1,12 @@
+{
+  "name": "market-dashboard",
+  "version": "1.0.0",
+  "description": "Live crypto & market prices dashboard",
+  "scripts": {
+    "start": "node proxy-server.js",
+    "dev": "node proxy-server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

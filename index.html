@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Market Prices — Live</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:#0e0f11;color:#e8e6e0;min-height:100vh;padding:2rem 1.5rem}
+.page{max-width:1200px;margin:0 auto}
+
+/* ── header ── */
+.header{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:2rem}
+.header h1{font-size:24px;font-weight:700;letter-spacing:-0.5px;color:#f0ede6}
+.header p{font-size:12px;color:#555;margin-top:3px}
+.hdr-right{display:flex;align-items:center;gap:8px}
+.cd{font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;background:#0d2c1e;color:#2dd4a0;border:1px solid #163d2a;font-family:'Space Mono',monospace}
+.ts{font-size:11px;color:#3a3b3f;font-family:'Space Mono',monospace}
+.btn{display:flex;align-items:center;gap:5px;padding:6px 14px;border-radius:8px;border:1px solid #2a2b2e;background:#141518;color:#888;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn:hover{border-color:#444;color:#ddd}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.spin{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── section label ── */
+.sec{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#3a3b3f;margin:2rem 0 .8rem;padding-bottom:7px;border-bottom:1px solid #1a1b1e}
+
+/* ── small price cards (global/crypto/india) ── */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px}
+.card{background:#141518;border:1px solid #1e1f22;border-radius:12px;padding:.9rem;position:relative;overflow:hidden;transition:border-color .2s}
+.card:hover{border-color:#2e2f33}
+.bar{position:absolute;top:0;left:0;right:0;height:2px}
+.ci{font-size:22px;margin-bottom:8px;display:block;line-height:1}
+.cn{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#4a4b4f}
+.cs{font-size:9px;color:#2a2b2e}
+.cp{font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:#f0ede6;margin:6px 0 3px;word-break:break-all}
+.cc{font-size:11px;font-weight:700;font-family:'Space Mono',monospace}
+.cc.up{color:#2dd4a0}.cc.dn{color:#f06060}
+.cu{font-size:9px;color:#2a2b2e;margin-top:3px}
+.ci img{width:24px;height:24px;object-fit:contain;vertical-align:middle}
+
+/* ── exchange comparison cards ── */
+.coin-block{margin-bottom:2rem}
+.coin-label{display:flex;align-items:center;gap:10px;margin-bottom:.8rem}
+.coin-icon{font-size:22px;line-height:1;display:flex;align-items:center}
+.coin-icon img{width:22px;height:22px;object-fit:contain}
+.coin-name{font-size:14px;font-weight:700;color:#e8e6e0}
+.coin-sym{font-size:11px;color:#3a3b3f}
+.exc-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.exc-card{background:#141518;border:1px solid #1e1f22;border-radius:12px;padding:.9rem 1rem;position:relative;overflow:hidden;transition:border-color .2s}
+.exc-card:hover{border-color:#2a2b2e}
+.exc-card.best{border-color:#1a4535;background:#0b1911}
+.exc-bar{position:absolute;top:0;left:0;right:0;height:2px}
+.exc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem}
+.exc-id{display:flex;align-items:center;gap:7px}
+.exc-logo{width:24px;height:24px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0}
+.exc-name{font-size:11px;font-weight:700;color:#999}
+.best-badge{font-size:9px;font-weight:700;background:#0d2c1e;color:#2dd4a0;padding:2px 7px;border-radius:20px}
+.plabel{font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#2e2f33;margin-bottom:3px}
+.pval{font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:#f0ede6;line-height:1;margin-bottom:.4rem}
+.pval.na{font-size:12px;color:#2e2f33}
+.mrow{display:flex;gap:12px;margin-top:.7rem;padding-top:.7rem;border-top:1px solid #1a1b1e}
+.mlabel{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#2a2b2e;margin-bottom:2px}
+.mval{font-family:'Space Mono',monospace;font-size:10px;font-weight:700;color:#555}
+.mval.up{color:#2dd4a0}.mval.dn{color:#f06060}
+
+/* ── skeleton ── */
+.sk{background:linear-gradient(90deg,#1a1b1e 25%,#242528 50%,#1a1b1e 75%);background-size:200% 100%;animation:sk 1.4s infinite;border-radius:4px;display:inline-block;vertical-align:middle}
+@keyframes sk{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* ── status + diag ── */
+.status{display:flex;align-items:center;gap:8px;font-size:11px;color:#3a3b3f;margin-top:1.5rem}
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:#333}
+.dot.ok{background:#2dd4a0}.dot.loading{background:#f0a030;animation:pulse .9s infinite}.dot.err{background:#f06060}
+@keyframes pulse{0%,100%{opacity:.2}50%{opacity:1}}
+.diag{margin-top:1rem;background:#0d0e10;border:1px solid #1a1b1e;border-radius:10px;overflow:hidden}
+.diag summary{padding:.6rem 1rem;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#2e2f33;cursor:pointer;list-style:none;user-select:none}
+.diag summary:hover{color:#444}
+.diag-body{padding:.4rem 1rem .8rem;font-family:'Space Mono',monospace;font-size:10px;line-height:2;color:#3a3b3f}
+.diag-body .ok{color:#2dd4a0}.diag-body .fail{color:#f06060}.diag-body .warn{color:#f0a030}
+
+@media(max-width:900px){.exc-row{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.exc-row{grid-template-columns:1fr}.grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div>
+      <h1>Market Prices</h1>
+      <p id="last-upd">Initialising…</p>
+    </div>
+    <div class="hdr-right">
+      <span class="cd" id="cd">⏱ 30s</span>
+      <span class="ts" id="ts"></span>
+      <button class="btn" id="ref-btn" onclick="fetchAll()" disabled>
+        <svg id="ref-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></svg>
+        Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- Global + India markets (top section) -->
+  <div id="markets"></div>
+
+  <!-- Indian exchange comparison (bottom section) -->
+  <div id="exchanges"></div>
+
+  <div class="status"><div class="dot" id="dot"></div><span id="stxt">Starting…</span></div>
+  <details class="diag">
+    <summary>▸ API diagnostics</summary>
+    <div class="diag-body" id="diag-out">Waiting…</div>
+  </details>
+</div>
+
+<script>
+"use strict";
+var cdTimer=null, cdVal=30;
+
+/* ══════════════════════════════════════════════
+   CONFIG
+══════════════════════════════════════════════ */
+
+var GLOBAL_CARDS = [
+  {id:'gold',   name:'Gold',     sym:'XAU/USD',icon:'🥇',bar:'#EF9F27',unit:'per troy oz'},
+  {id:'silver', name:'Silver',   sym:'XAG/USD',icon:'🥈',bar:'#888780',unit:'per troy oz'},
+  {id:'crude',  name:'Crude Oil',sym:'WTI/USD',icon:'🛢', bar:'#5DCAA5',unit:'per barrel'},
+  {id:'usdInr', name:'USD/INR',  sym:'USD/INR',icon:'🇮🇳',bar:'#FF9933',unit:'per 1 USD'},
+  {id:'usdPhp', name:'USD/PHP',  sym:'USD/PHP',icon:'🇵🇭',bar:'#0038A8',unit:'per 1 USD'},
+  {id:'usdIdr', name:'USD/IDR',  sym:'USD/IDR',icon:'🇮🇩',bar:'#CE1126',unit:'per 1 USD'},
+];
+var CRYPTO_CARDS = [
+  {id:'btcUsd', name:'Bitcoin', sym:'BTC/USD', icon:'<img src="https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/btc.svg"  alt="BTC">',  bar:'#D85A30',unit:'per coin'},
+  {id:'ethUsd', name:'Ethereum',sym:'ETH/USD', icon:'<img src="https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/eth.svg"  alt="ETH">',  bar:'#7F77DD',unit:'per coin'},
+  {id:'solUsd', name:'Solana',  sym:'SOL/USD', icon:'<img src="https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/sol.svg"  alt="SOL">',  bar:'#9945FF',unit:'per coin'},
+  {id:'bnbUsd', name:'BNB',     sym:'BNB/USD', icon:'<img src="https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/bnb.svg"  alt="BNB">',  bar:'#F0B90B',unit:'per coin'},
+  {id:'usdt',   name:'Tether',  sym:'USDT/USD',icon:'<img src="https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/usdt.svg" alt="USDT">',  bar:'#1D9E75',unit:'stablecoin'},
+  {id:'usdc',   name:'USD Coin',sym:'USDC/USD',icon:'<img src="https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/usdc.svg" alt="USDC">', bar:'#378ADD',unit:'stablecoin'},
+];
+var INDIA_CARDS = [
+  {id:'gold24k', name:'Gold 24K',sym:'INR 99.9%',icon:'🥇',bar:'#EF9F27',unit:'per gram'},
+  {id:'gold22k', name:'Gold 22K',sym:'INR 91.6%',icon:'🥇',bar:'#BA7517',unit:'per gram'},
+  {id:'gold18k', name:'Gold 18K',sym:'INR 75%',  icon:'🥇',bar:'#854F0B',unit:'per gram'},
+  {id:'silverIN',name:'Silver',  sym:'INR 999',  icon:'🥈',bar:'#888780',unit:'per gram'},
+];
+
+var COINS = [
+  {id:'btc', name:'Bitcoin', sym:'BTC/INR',icon:'<img src="https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/btc.svg"  alt="BTC">',cdxMarket:'BTCINR', zbPair:'BTC-INR', dec:0},
+  {id:'usdt',name:'Tether',  sym:'USDT/INR',icon:'<img src="https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/usdt.svg" alt="USDT">',cdxMarket:'USDTINR',zbPair:'USDT-INR',dec:2},
+  {id:'eth', name:'Ethereum',sym:'ETH/INR',icon:'<img src="https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/eth.svg"  alt="ETH">',cdxMarket:'ETHINR', zbPair:'ETH-INR', dec:0},
+  {id:'sol', name:'Solana',  sym:'SOL/INR',icon:'<img src="https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/sol.svg"  alt="SOL">',cdxMarket:'SOLINR', zbPair:'SOL-INR', dec:2},
+];
+var EXCHANGES = [
+  {id:'coindcx',   name:'CoinDCX',   color:'#1B4FD8',letter:'D',bar:'#1B4FD8'},
+  {id:'zebpay',    name:'ZebPay',    color:'#E05C00',letter:'Z',bar:'#E05C00'},
+  {id:'coinswitch',name:'CoinSwitch',color:'#7B3FE4',letter:'C',bar:'#7B3FE4'},
+  {id:'wazirx',    name:'WazirX',    color:'#1AA3B8',letter:'W',bar:'#1AA3B8'},
+];
+
+/* ══════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════ */
+
+var mkt = {};   // global/crypto/india prices
+var exc = {};   // exchange comparison prices
+COINS.forEach(function(c){exc[c.id]={coindcx:null,zebpay:null,coinswitch:null,wazirx:null};});
+
+/* ══════════════════════════════════════════════
+   DIAGNOSTICS
+══════════════════════════════════════════════ */
+
+var diag=[];
+function dset(label,status,detail){
+  var i=diag.findIndex(function(d){return d.label===label;});
+  var e={label:label,status:status,detail:detail||''};
+  if(i>=0)diag[i]=e; else diag.push(e);
+  document.getElementById('diag-out').innerHTML=diag.map(function(d){
+    var ic=d.status==='ok'?'✓':d.status==='fail'?'✗':'⚠';
+    return '<div><span class="'+d.status+'">'+ic+'</span>  '+d.label+(d.detail?'  <span style="color:#2a2b2e">'+d.detail+'</span>':'')+'</div>';
+  }).join('');
+}
+function setStatus(cls,txt){document.getElementById('dot').className='dot '+cls;document.getElementById('stxt').textContent=txt;}
+
+/* ══════════════════════════════════════════════
+   RENDER — SMALL CARDS
+══════════════════════════════════════════════ */
+
+function sk(w,h){return '<span class="sk" style="width:'+w+'px;height:'+h+'px">&nbsp;</span>';}
+
+function skSmall(a){
+  return '<div class="card"><div class="bar" style="background:'+a.bar+'"></div>'
+    +'<span class="ci">'+a.icon+'</span><div class="cn">'+a.name+'</div><div class="cs">'+a.sym+'</div>'
+    +'<div class="cp">'+sk(80,14)+'</div><div style="margin-top:3px">'+sk(55,10)+'</div>'
+    +'<div class="cu">'+a.unit+'</div></div>';
+}
+
+function priceSmall(a,d){
+  var p=d&&d.price?d.price:'—';
+  var ch=d&&d.change?d.change:'';
+  var up=ch.indexOf('+')===0, dn=ch.indexOf('-')===0;
+  var cls=up?'up':dn?'dn':'', arrow=up?'▲ ':dn?'▼ ':'';
+  return '<div class="card"><div class="bar" style="background:'+a.bar+'"></div>'
+    +'<span class="ci">'+a.icon+'</span><div class="cn">'+a.name+'</div><div class="cs">'+a.sym+'</div>'
+    +'<div class="cp">'+p+'</div>'
+    +(ch?'<div class="cc '+cls+'">'+arrow+ch+'</div>':'')
+    +'<div class="cu">'+a.unit+'</div></div>';
+}
+
+function buildMarketsDOM(data){
+  // derive USD/INR from USDT INR price if available
+  if(!data.usdInr && exc.usdt){
+    var usdtInr = (exc.usdt.coindcx && exc.usdt.coindcx.last)
+               || (exc.usdt.zebpay  && exc.usdt.zebpay.last)
+               || (exc.usdt.wazirx  && exc.usdt.wazirx.last);
+    if(usdtInr) data.usdInr = {price:'₹'+Number(usdtInr).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}), change:''};
+  }
+
+  return '<div class="sec">Global Markets</div>'
+    +'<div class="grid">'+GLOBAL_CARDS.map(function(a){return priceSmall(a,data[a.id]);}).join('')+'</div>'
+    +'<div class="sec">Crypto (USD)</div>'
+    +'<div class="grid">'+CRYPTO_CARDS.map(function(a){return priceSmall(a,data[a.id]);}).join('')+'</div>'
+    +'<div class="sec">India — Precious Metals</div>'
+    +'<div class="grid">'+INDIA_CARDS.map(function(a){return priceSmall(a,data[a.id]);}).join('')+'</div>';
+}
+
+function buildMarketsSkeleton(){
+  return '<div class="sec">Global Markets</div><div class="grid">'+GLOBAL_CARDS.map(skSmall).join('')+'</div>'
+    +'<div class="sec">Crypto (USD)</div><div class="grid">'+CRYPTO_CARDS.map(skSmall).join('')+'</div>'
+    +'<div class="sec">India — Precious Metals</div><div class="grid">'+INDIA_CARDS.map(skSmall).join('')+'</div>';
+}
+
+/* ══════════════════════════════════════════════
+   RENDER — EXCHANGE CARDS
+══════════════════════════════════════════════ */
+
+function inr(n,dec){
+  if(n==null)return '—';
+  return '₹'+Number(n).toLocaleString('en-IN',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+}
+
+function skExc(e){
+  return '<div class="exc-card"><div class="exc-bar" style="background:'+e.bar+'"></div>'
+    +'<div class="exc-head"><div class="exc-id"><div class="exc-logo" style="background:'+e.color+'">'+e.letter+'</div>'
+    +'<span class="exc-name">'+e.name+'</span></div></div>'
+    +'<div class="plabel">LAST PRICE</div>'
+    +'<div class="pval">'+sk(120,16)+'</div>'
+    +'<div class="mrow">'
+    +'<div><div class="mlabel">BID</div><div class="mval">'+sk(60,10)+'</div></div>'
+    +'<div><div class="mlabel">ASK</div><div class="mval">'+sk(60,10)+'</div></div>'
+    +'<div><div class="mlabel">24H</div><div class="mval">'+sk(36,10)+'</div></div>'
+    +'</div></div>';
+}
+
+function buildExcCard(e,d,isBest,dec){
+  var ch=d.change!=null?parseFloat(d.change):null;
+  var cls=ch==null?'':ch>=0?'up':'dn';
+  var chStr=ch==null?'—':(ch>=0?'▲ ':'▼ ')+Math.abs(ch).toFixed(2)+'%';
+  return '<div class="exc-card'+(isBest?' best':'')+'"><div class="exc-bar" style="background:'+e.bar+'"></div>'
+    +'<div class="exc-head"><div class="exc-id"><div class="exc-logo" style="background:'+e.color+'">'+e.letter+'</div>'
+    +'<span class="exc-name">'+e.name+'</span></div>'
+    +(isBest?'<span class="best-badge">Best Rate</span>':'')
+    +'</div>'
+    +'<div class="plabel">LAST PRICE</div>'
+    +'<div class="pval">'+inr(d.last,dec)+'</div>'
+    +'<div class="mrow">'
+    +'<div><div class="mlabel">Bid</div><div class="mval">'+inr(d.bid,dec)+'</div></div>'
+    +'<div><div class="mlabel">Ask</div><div class="mval">'+inr(d.ask,dec)+'</div></div>'
+    +'<div><div class="mlabel">24h</div><div class="mval '+cls+'">'+chStr+'</div></div>'
+    +'</div></div>';
+}
+
+function noExcCard(e,d){
+  var msg='No data';
+  return '<div class="exc-card"><div class="exc-bar" style="background:'+e.bar+'"></div>'
+    +'<div class="exc-head"><div class="exc-id"><div class="exc-logo" style="background:'+e.color+'">'+e.letter+'</div>'
+    +'<span class="exc-name">'+e.name+'</span></div></div>'
+    +'<div class="plabel">LAST PRICE</div><div class="pval na">'+msg+'</div></div>';
+}
+
+function renderExchanges(){
+  var html='<div class="sec">Indian Exchanges — INR</div>';
+  COINS.forEach(function(coin,i){
+    if(i>0) html+='<div style="height:1.5rem"></div>';
+    var asks=EXCHANGES.map(function(e){return exc[coin.id][e.id]&&exc[coin.id][e.id].ask;}).filter(Boolean).map(Number);
+    var bestAsk=asks.length?Math.min.apply(null,asks):null;
+    html+='<div class="coin-block">'
+      +'<div class="coin-label"><span class="coin-icon">'+coin.icon+'</span>'
+      +'<span class="coin-name">'+coin.name+'</span><span class="coin-sym">'+coin.sym+'</span></div>'
+      +'<div class="exc-row">'
+      +EXCHANGES.map(function(e){
+        var d=exc[coin.id][e.id];
+        if(!d||(!d.last&&!d.bid&&!d.ask)) return noExcCard(e,d);
+        return buildExcCard(e,d,bestAsk&&Number(d.ask)===bestAsk,coin.dec);
+      }).join('')
+      +'</div></div>';
+  });
+  document.getElementById('exchanges').innerHTML=html;
+}
+
+function buildExchangesSkeleton(){
+  var html='<div class="sec">Indian Exchanges — INR</div>';
+  COINS.forEach(function(coin,i){
+    if(i>0) html+='<div style="height:1.5rem"></div>';
+    html+='<div class="coin-block">'
+      +'<div class="coin-label"><span class="coin-icon">'+coin.icon+'</span>'
+      +'<span class="coin-name">'+coin.name+'</span><span class="coin-sym">'+coin.sym+'</span></div>'
+      +'<div class="exc-row">'+EXCHANGES.map(skExc).join('')+'</div></div>';
+  });
+  return html;
+}
+
+/* ══════════════════════════════════════════════
+   FETCH — GLOBAL MARKETS
+══════════════════════════════════════════════ */
+
+async function fetchMarkets(){
+  var data={};
+  // 1. WazirX for BTC/ETH/USDT/USDC in USD (use global prices from CoinGecko-style)
+  // We already have USD prices from WazirX INR + USD/INR rate — instead use CoinGecko
+  try {
+    var r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,binancecoin,tether,usd-coin&vs_currencies=usd&include_24hr_change=true',{cache:'no-store'});
+    if(r.ok){
+      var cg=await r.json();
+      function fmtUSD(n,d){return n!=null?'$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}):null;}
+      function fmtPct(n){return n!=null?(n>=0?'+':'')+Number(n).toFixed(2)+'%':'';}
+      data.btcUsd ={price:fmtUSD(cg.bitcoin&&cg.bitcoin.usd,0),         change:fmtPct(cg.bitcoin&&cg.bitcoin.usd_24h_change)};
+      data.ethUsd ={price:fmtUSD(cg.ethereum&&cg.ethereum.usd,2),       change:fmtPct(cg.ethereum&&cg.ethereum.usd_24h_change)};
+      data.solUsd ={price:fmtUSD(cg.solana&&cg.solana.usd,2),           change:fmtPct(cg.solana&&cg.solana.usd_24h_change)};
+      data.bnbUsd ={price:fmtUSD(cg.binancecoin&&cg.binancecoin.usd,2), change:fmtPct(cg.binancecoin&&cg.binancecoin.usd_24h_change)};
+      data.usdt   ={price:fmtUSD(cg.tether&&cg.tether.usd,4),           change:fmtPct(cg.tether&&cg.tether.usd_24h_change)};
+      data.usdc   ={price:fmtUSD(cg['usd-coin']&&cg['usd-coin'].usd,4), change:fmtPct(cg['usd-coin']&&cg['usd-coin'].usd_24h_change)};
+      data.usdc   ={price:fmtUSD(cg['usd-coin']&&cg['usd-coin'].usd,4), change:fmtPct(cg['usd-coin']&&cg['usd-coin'].usd_24h_change)};
+      dset('CoinGecko (crypto USD)','ok','');
+    }
+  } catch(e){ dset('CoinGecko (crypto USD)','fail',e.message); }
+
+  // 2. Metals + USD/INR — use open.er-api.com for FX and metals-api alternatives
+  //    Metals: gold-api.com (free, CORS open, no key)
+  function fmtU(n,d){return n!=null?'$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}):null;}
+  function fmtI(n,d){return n!=null?'₹'+Number(n).toLocaleString('en-IN',{minimumFractionDigits:d,maximumFractionDigits:d}):null;}
+
+  // 2a. USD/INR — from WazirX (already fetching) — use USDT/INR as proxy
+  //     We run this in parallel; also try open.er-api.com
+  var usdInrV = null;
+  try {
+    var fxr = await fetch('https://open.er-api.com/v6/latest/USD',{cache:'no-store'});
+    if(fxr.ok){
+      var fxd = await fxr.json();
+      usdInrV = fxd.rates && fxd.rates.INR;
+      if(usdInrV) data.usdInr={price:fmtI(usdInrV,2),change:''};
+      var phpRate = fxd.rates && fxd.rates.PHP;
+      if(phpRate) data.usdPhp={price:'₱'+Number(phpRate).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}),change:''};
+      var idrRate = fxd.rates && fxd.rates.IDR;
+      if(idrRate) data.usdIdr={price:'Rp'+Number(idrRate).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}),change:''};
+      dset('FX (USD/INR/PHP/IDR)','ok','INR:'+usdInrV+' PHP:'+phpRate+' IDR:'+idrRate);
+    }
+  } catch(e){ dset('FX (USD/INR/PHP/IDR)','warn',e.message); }
+
+  // 2b. Metals — gold-api.com (free, CORS open, no key, no rate limit)
+  //     GET https://api.gold-api.com/price/XAU → {price, symbol, ...}
+  //     GET https://api.gold-api.com/price/XAG → silver
+  var goldUSD=null, silverUSD=null;
+  try {
+    var [gr, sr] = await Promise.all([
+      fetch('https://api.gold-api.com/price/XAU',{cache:'no-store'}),
+      fetch('https://api.gold-api.com/price/XAG',{cache:'no-store'}),
+    ]);
+    if(gr.ok){ var gd=await gr.json(); goldUSD  = gd.price||gd.ask||null; }
+    if(sr.ok){ var sd=await sr.json(); silverUSD= sd.price||sd.ask||null; }
+    if(goldUSD){
+      data.gold  ={price:fmtU(goldUSD,2),  change:''};
+      data.silver={price:fmtU(silverUSD,2), change:''};
+      dset('gold-api.com (metals)','ok','Au $'+goldUSD+' Ag $'+silverUSD);
+    } else {
+      dset('gold-api.com (metals)','warn','no price in response');
+    }
+  } catch(e){ dset('gold-api.com (metals)','fail',e.message); }
+
+  // 2c. Crude oil fallback — corsproxy + Yahoo Finance
+  if(!data.crude){
+    try {
+      var crProxies = [
+        'https://corsproxy.io/?url='+encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/CL=F?interval=1d&range=1d'),
+        'https://api.allorigins.win/raw?url='+encodeURIComponent('https://query2.finance.yahoo.com/v8/finance/chart/CL=F?interval=1d&range=1d'),
+      ];
+      for(var pi=0;pi<crProxies.length;pi++){
+        try{
+          var crr=await fetch(crProxies[pi],{cache:'no-store'});
+          if(crr.ok){
+            var crd=await crr.json();
+            var crp=crd.chart&&crd.chart.result&&crd.chart.result[0]&&crd.chart.result[0].meta&&crd.chart.result[0].meta.regularMarketPrice;
+            if(crp){data.crude={price:fmtU(crp,2),change:''};dset('Crude oil','ok','$'+crp);break;}
+          }
+        }catch(e2){}
+      }
+      if(!data.crude) dset('Crude oil','warn','unavailable');
+    } catch(e){ dset('Crude oil','warn',e.message); }
+  }
+
+  // 2d. Derive India metals from gold/silver USD + USD/INR
+  if(goldUSD && usdInrV){
+    var TROY=31.1035;
+    data.gold24k ={price:fmtI(goldUSD/TROY*usdInrV*0.999,2),change:''};
+    data.gold22k ={price:fmtI(goldUSD/TROY*usdInrV*0.916,2),change:''};
+    data.gold18k ={price:fmtI(goldUSD/TROY*usdInrV*0.750,2),change:''};
+    if(silverUSD) data.silverIN={price:fmtI(silverUSD/TROY*usdInrV,2),change:''};
+  }
+
+  return data;
+}
+
+/* ══════════════════════════════════════════════
+   FETCH — COINDCX
+══════════════════════════════════════════════ */
+
+async function fetchCoinDCX(){
+  dset('CoinDCX','warn','fetching…');
+  var t=Date.now();
+  var r=await fetch('https://api.coindcx.com/exchange/ticker',{cache:'no-store'});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  var data=await r.json();
+  dset('CoinDCX','ok',(Date.now()-t)+'ms');
+  COINS.forEach(function(c){
+    var item=data.find(function(t){return t.market===c.cdxMarket;});
+    if(item) exc[c.id].coindcx={last:item.last_price,bid:item.bid,ask:item.ask,change:item.change_24_hour};
+  });
+}
+
+/* ══════════════════════════════════════════════
+   FETCH — ZEBPAY (WebSocket)
+══════════════════════════════════════════════ */
+
+function fetchZebPay(){
+  return new Promise(function(resolve){
+    var done=false, ws;
+    var timeout=setTimeout(function(){
+      if(!done){done=true;if(ws)ws.close();dset('ZebPay WS','warn','timeout');resolve();}
+    },8000);
+    var zbMap={};
+    COINS.forEach(function(c){zbMap[c.zbPair]=c.id;});
+    function zbObj(pair){
+      var cid=zbMap[pair]; if(!cid)return null;
+      exc[cid].zebpay=exc[cid].zebpay||{last:null,bid:null,ask:null,change:null};
+      return exc[cid].zebpay;
+    }
+    try {
+      dset('ZebPay WS','warn','connecting…');
+      ws=new WebSocket('wss://socket.zebapi.com/api/v1/websocket/public');
+      ws.onopen=function(){
+        dset('ZebPay WS','warn','subscribing…');
+        COINS.forEach(function(c){
+          ['exchange-marketprice','exchange-topbuy','exchange-topsell','exchange-pricechange'].forEach(function(t){
+            ws.send(JSON.stringify({request:t+'/'+c.zbPair}));
+          });
+        });
+        ws.send(JSON.stringify({request:'qt-trending/INR/INR'}));
+      };
+      ws.onmessage=function(evt){
+        try{
+          var msg=JSON.parse(evt.data), rt=msg.type, pair=msg.requestType;
+          if(rt==='exchange-marketprice'){var o=zbObj(pair);if(o)o.last=msg.data;}
+          if(rt==='exchange-topbuy')    {var o=zbObj(pair);if(o)o.bid =msg.data;}
+          if(rt==='exchange-topsell')   {var o=zbObj(pair);if(o)o.ask =msg.data;}
+          if(rt==='exchange-pricechange'){var o=zbObj(pair);if(o)o.change=msg.data;}
+          if(rt==='qt-trending'&&Array.isArray(msg.data)){
+            msg.data.forEach(function(item){
+              var o=zbObj(item.CurrencyCode+'-INR');
+              if(o){if(!o.last)o.last=item.Rate;if(!o.bid)o.bid=item.Rate;if(!o.ask)o.ask=item.SellRate;if(!o.change)o.change=item.PercentDiff;}
+            });
+          }
+          COINS.forEach(function(c){var z=exc[c.id].zebpay;if(z&&z.last)dset('ZebPay '+c.id.toUpperCase(),'ok','₹'+Number(z.last).toLocaleString('en-IN'));});
+          var allDone=COINS.every(function(c){var z=exc[c.id].zebpay;return z&&z.last&&z.bid&&z.ask;});
+          if(allDone&&!done){done=true;clearTimeout(timeout);ws.close();dset('ZebPay WS','ok','all received');resolve();}
+        }catch(e2){}
+      };
+      ws.onerror=function(){if(!done){done=true;clearTimeout(timeout);dset('ZebPay WS','fail','error');resolve();}};
+      ws.onclose=function(){if(!done){done=true;clearTimeout(timeout);resolve();}};
+    }catch(e){dset('ZebPay WS','fail',e.message);if(!done){done=true;clearTimeout(timeout);resolve();}}
+  });
+}
+
+/* ══════════════════════════════════════════════
+   FETCH — WAZIRX
+══════════════════════════════════════════════ */
+
+async function fetchWazirX(){
+  dset('WazirX','warn','fetching…');
+  var t=Date.now();
+  var r=await fetch('https://api.wazirx.com/sapi/v1/tickers/24hr',{cache:'no-store'});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  var data=await r.json();
+  var map={};
+  data.forEach(function(t){map[t.symbol]=t;});
+  dset('WazirX','ok',(Date.now()-t)+'ms · '+data.length+' pairs');
+  COINS.forEach(function(c){
+    var d=map[c.id.toLowerCase()+'inr'];
+    if(d) exc[c.id].wazirx={last:parseFloat(d.lastPrice),bid:parseFloat(d.bidPrice),ask:parseFloat(d.askPrice),change:parseFloat(d.priceChangePercent)};
+  });
+}
+
+/* ══════════════════════════════════════════════
+   FETCH — COINSWITCH (local proxy)
+══════════════════════════════════════════════ */
+
+async function fetchCoinSwitch(){
+  dset('CoinSwitch proxy','warn','fetching…');
+  var t=Date.now();
+  var r=await fetch('/api/prices',{cache:'no-store'});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  var data=await r.json();
+  dset('CoinSwitch proxy','ok',(Date.now()-t)+'ms');
+  COINS.forEach(function(c){
+    var p=data[c.id];
+    if(p&&p>0){
+      exc[c.id].coinswitch={last:p,bid:null,ask:null,change:null};
+      dset('CoinSwitch '+c.id.toUpperCase(),'ok','₹'+Number(p).toLocaleString('en-IN'));
+    } else {
+      dset('CoinSwitch '+c.id.toUpperCase(),'warn','no price');
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════
+   MAIN
+══════════════════════════════════════════════ */
+
+async function fetchAll(){
+  setStatus('loading','Fetching…');
+  document.getElementById('ref-btn').disabled=true;
+  document.getElementById('ref-icon').classList.add('spin');
+  document.getElementById('last-upd').textContent='Updating…';
+  clearInterval(cdTimer);
+  document.getElementById('cd').textContent='⏱ …';
+  diag=[];
+
+  // Reset exchange state + show skeletons
+  COINS.forEach(function(c){exc[c.id]={coindcx:null,zebpay:null,coinswitch:null,wazirx:null};});
+  document.getElementById('markets').innerHTML=buildMarketsSkeleton();
+  document.getElementById('exchanges').innerHTML=buildExchangesSkeleton();
+
+  // Run all fetches in parallel where possible
+  var mktData={};
+  await Promise.all([
+    // Markets (independent)
+    fetchMarkets().then(function(d){mktData=d;}),
+    // CoinDCX
+    fetchCoinDCX().catch(function(e){dset('CoinDCX','fail',e.message);}),
+    // ZebPay WebSocket
+    fetchZebPay(),
+    // WazirX
+    fetchWazirX().catch(function(e){dset('WazirX','fail',e.message);}),
+    // CoinSwitch proxy
+    fetchCoinSwitch().catch(function(e){
+      dset('CoinSwitch proxy','fail',e.message);
+      COINS.forEach(function(c){exc[c.id].coinswitch={last:null,bid:null,ask:null,change:null,offline:true};});
+    }),
+  ]);
+
+  // Render both sections
+  document.getElementById('markets').innerHTML=buildMarketsDOM(mktData);
+  renderExchanges();
+
+  var t=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('ts').textContent=t;
+  document.getElementById('last-upd').textContent='Live · '+t;
+  var anyData=COINS.some(function(c){return exc[c.id].coindcx||exc[c.id].zebpay||exc[c.id].wazirx;});
+  setStatus(anyData?'ok':'err',anyData?'Live · '+t:'All sources failed');
+  document.getElementById('ref-btn').disabled=false;
+  document.getElementById('ref-icon').classList.remove('spin');
+  startCountdown();
+}
+
+function startCountdown(){
+  clearInterval(cdTimer); cdVal=30;
+  cdTimer=setInterval(function(){
+    cdVal--;
+    document.getElementById('cd').textContent=cdVal>0?('⏱ '+cdVal+'s'):'⏱ …';
+    if(cdVal<=0){clearInterval(cdTimer);fetchAll();}
+  },1000);
+}
+
+fetchAll();
+</script>
+</body>
+</html>
