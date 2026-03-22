@@ -383,12 +383,21 @@ async function fetchMarkets(){
     }
   } catch(e){ dset('gold-api.com (metals)','fail',e.message); }
 
-  // 2c. Crude oil — fetched server-side via /api/prices
-  if(!data.crude && window._crudeUSD && window._crudeUSD>0){
-    data.crude={price:fmtU(window._crudeUSD,2),change:''};
-    dset('Crude oil','ok','$'+window._crudeUSD);
+  // 2c. Crude oil — fetch from /api/prices serverless (oilprice.com scraper)
+  if(!data.crude){
+    try{
+      var cpr = await fetch('/api/prices',{cache:'no-store'});
+      if(cpr.ok){
+        var cpd = await cpr.json();
+        if(cpd.crudeUSD && cpd.crudeUSD>20){
+          data.crude={price:fmtU(cpd.crudeUSD,2),change:''};
+          dset('Crude oil','ok','$'+cpd.crudeUSD);
+        }
+      }
+    }catch(e2){}
   }
   if(!data.crude) dset('Crude oil','warn','unavailable');
+
 
   // 2d. Derive India metals from gold/silver USD + USD/INR
   if(goldUSD && usdInrV){
