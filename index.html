@@ -550,38 +550,54 @@ async function fetchAll(){
   document.getElementById('cd').textContent='⏱ …';
   diag=[];
 
-  // Reset exchange state + show skeletons
+  // Reset exchange state + show skeletons immediately
   COINS.forEach(function(c){exc[c.id]={coindcx:null,zebpay:null,coinswitch:null,wazirx:null};});
   document.getElementById('markets').innerHTML=buildMarketsSkeleton();
   document.getElementById('exchanges').innerHTML=buildExchangesSkeleton();
 
-  // Run all fetches in parallel where possible
   var mktData={};
-  await Promise.all([
-    // Markets (independent)
-    fetchMarkets().then(function(d){mktData=d;}),
-    // CoinDCX
-    fetchCoinDCX().catch(function(e){dset('CoinDCX','fail',e.message);}),
-    // ZebPay WebSocket
-    fetchZebPay(),
-    // WazirX
-    fetchWazirX().catch(function(e){dset('WazirX','fail',e.message);}),
-    // CoinSwitch proxy
-    fetchCoinSwitch().catch(function(e){
-      dset('CoinSwitch proxy','fail',e.message);
-      COINS.forEach(function(c){exc[c.id].coinswitch={last:null,bid:null,ask:null,change:null,offline:true};});
-    }),
-  ]);
 
-  // Merge Bangalore fuel data into market data
-  if(window._fuelData){
-    if(window._fuelData.petrolBLR) mktData.petrolBLR=window._fuelData.petrolBLR;
-    if(window._fuelData.dieselBLR) mktData.dieselBLR=window._fuelData.dieselBLR;
+  // Helper: re-render markets section with latest data
+  function refreshMarkets(){
+    var d=Object.assign({},mktData);
+    if(window._fuelData){
+      if(window._fuelData.petrolBLR) d.petrolBLR=window._fuelData.petrolBLR;
+      if(window._fuelData.dieselBLR) d.dieselBLR=window._fuelData.dieselBLR;
+    }
+    document.getElementById('markets').innerHTML=buildMarketsDOM(d);
   }
 
-  // Render both sections
-  document.getElementById('markets').innerHTML=buildMarketsDOM(mktData);
-  renderExchanges();
+  // Markets: render as soon as they arrive (independent of exchanges)
+  var mktPromise = fetchMarkets().then(function(d){
+    mktData=d;
+    refreshMarkets();
+  }).catch(function(e){ dset('Markets','fail',e.message); });
+
+  // Exchange sources: each re-renders exchanges section as soon as it resolves
+  var cdxPromise = fetchCoinDCX().then(function(){
+    renderExchanges();
+  }).catch(function(e){ dset('CoinDCX','fail',e.message); });
+
+  var zbpPromise = fetchZebPay().then(function(){
+    renderExchanges();
+  });
+
+  var wzxPromise = fetchWazirX().then(function(){
+    renderExchanges();
+  }).catch(function(e){ dset('WazirX','fail',e.message); });
+
+  // CoinSwitch (slowest): renders exchanges + updates fuel/crude when done
+  var cswPromise = fetchCoinSwitch().then(function(){
+    renderExchanges();
+    refreshMarkets(); // picks up fuel + crude from serverless
+  }).catch(function(e){
+    dset('CoinSwitch proxy','fail',e.message);
+    COINS.forEach(function(c){exc[c.id].coinswitch={last:null,bid:null,ask:null,change:null,offline:true};});
+    renderExchanges();
+  });
+
+  // Wait for all to complete before finalising status
+  await Promise.all([mktPromise, cdxPromise, zbpPromise, wzxPromise, cswPromise]);
 
   var t=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   document.getElementById('ts').textContent=t;
