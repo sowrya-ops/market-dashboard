@@ -140,10 +140,12 @@ var CRYPTO_CARDS = [
   {id:'usdc',   name:'USD Coin',sym:'USDC/USD',icon:'<img src="https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/usdc.svg" alt="USDC">', bar:'#378ADD',unit:'stablecoin'},
 ];
 var INDIA_CARDS = [
-  {id:'gold24k', name:'Gold 24K',sym:'INR 99.9%',icon:'🥇',bar:'#EF9F27',unit:'per gram'},
-  {id:'gold22k', name:'Gold 22K',sym:'INR 91.6%',icon:'🥇',bar:'#BA7517',unit:'per gram'},
-  {id:'gold18k', name:'Gold 18K',sym:'INR 75%',  icon:'🥇',bar:'#854F0B',unit:'per gram'},
-  {id:'silverIN',name:'Silver',  sym:'INR 999',  icon:'🥈',bar:'#888780',unit:'per gram'},
+  {id:'gold24k',  name:'Gold 24K', sym:'INR 99.9%', icon:'🥇',bar:'#EF9F27',unit:'per gram'},
+  {id:'gold22k',  name:'Gold 22K', sym:'INR 91.6%', icon:'🥇',bar:'#BA7517',unit:'per gram'},
+  {id:'gold18k',  name:'Gold 18K', sym:'INR 75%',   icon:'🥇',bar:'#854F0B',unit:'per gram'},
+  {id:'silverIN', name:'Silver',   sym:'INR 999',   icon:'🥈',bar:'#888780',unit:'per gram'},
+  {id:'petrolBLR',name:'Petrol',   sym:'Bengaluru', icon:'⛽',bar:'#E05C2A',unit:'per litre'},
+  {id:'dieselBLR',name:'Diesel',   sym:'Bengaluru', icon:'🛢️',bar:'#4A7C59',unit:'per litre'},
 ];
 
 var COINS = [
@@ -504,7 +506,7 @@ async function fetchWazirX(){
    FETCH — COINSWITCH (local proxy)
 ══════════════════════════════════════════════ */
 
-async function fetchCoinSwitch(){
+async function fetchCoinSwitch(){\
   dset('CoinSwitch proxy','warn','fetching…');
   var t=Date.now();
   var r=await fetch('/api/prices',{cache:'no-store'});
@@ -520,6 +522,15 @@ async function fetchCoinSwitch(){
       dset('CoinSwitch '+c.id.toUpperCase(),'warn','no price');
     }
   });
+  // Bangalore fuel prices from same serverless response
+  if(data.petrolBLR && data.petrolBLR>0){
+    window._fuelData = window._fuelData||{};
+    window._fuelData.petrolBLR = {price: fmtI(data.petrolBLR,2), change:''};
+    window._fuelData.dieselBLR = data.dieselBLR ? {price: fmtI(data.dieselBLR,2), change:''} : null;
+    dset('Fuel Bengaluru','ok','⛽₹'+data.petrolBLR+' 🛢₹'+data.dieselBLR);
+  } else {
+    dset('Fuel Bengaluru','warn','no price');
+  }
 }
 
 /* ══════════════════════════════════════════════
@@ -557,6 +568,12 @@ async function fetchAll(){
       COINS.forEach(function(c){exc[c.id].coinswitch={last:null,bid:null,ask:null,change:null,offline:true};});
     }),
   ]);
+
+  // Merge Bangalore fuel data into market data
+  if(window._fuelData){
+    if(window._fuelData.petrolBLR) mktData.petrolBLR=window._fuelData.petrolBLR;
+    if(window._fuelData.dieselBLR) mktData.dieselBLR=window._fuelData.dieselBLR;
+  }
 
   // Render both sections
   document.getElementById('markets').innerHTML=buildMarketsDOM(mktData);

@@ -86,6 +86,44 @@ let cache = null;
 let cacheTime = 0;
 const CACHE_TTL = 30000; // 30s
 
+// Scrape Bangalore petrol/diesel from goodreturns.in
+async function fetchBangaloreFuel() {
+  const results = { petrol: null, diesel: null };
+  try {
+    const [petrolHtml, dieselHtml] = await Promise.all([
+      fetchPage('https://www.goodreturns.in/petrol-price-in-bangalore.html'),
+      fetchPage('https://www.goodreturns.in/diesel-price-in-bangalore.html'),
+    ]);
+
+    // Pattern: "₹102.92 per litre" or similar in title/body
+    const extractPrice = (html) => {
+      // Try title first: "Petrol Price in Bangalore, Petrol Rate Today ... Rs. 102.92/Ltr"
+      let m = html.match(/Rs\.\s*([\d.]+)\s*\/\s*[Ll]tr/);
+      if (m) return parseFloat(m[1]);
+      // Try "₹102.92 per litre"
+      m = html.match(/(?:₹|&#x20B9;)([\d.]+)\s*per\s+litre/i);
+      if (m) return parseFloat(m[1]);
+      // Try JSON-LD or meta price
+      m = html.match(/"price"\s*:\s*"([\d.]+)"/);
+      if (m) return parseFloat(m[1]);
+      // Fallback: first ₹NNN.NN that looks like a fuel price (85–130 range)
+      const re = /(?:₹|&#x20B9;)([\d]+\.[\d]{2})/g;
+      let hit;
+      while ((hit = re.exec(html)) !== null) {
+        const v = parseFloat(hit[1]);
+        if (v >= 85 && v <= 130) return v;
+      }
+      return null;
+    };
+
+    results.petrol = extractPrice(petrolHtml);
+    results.diesel = extractPrice(dieselHtml);
+  } catch (e) {
+    // silently fail — frontend will show N/A
+  }
+  return results;
+}
+
 export default async function handler(req, res) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -102,14 +140,22 @@ export default async function handler(req, res) {
 
   const result = { _ts: Date.now() };
 
-  await Promise.all(COINS.map(async coin => {
-    try {
-      const html = await fetchPage(coin.url);
-      result[coin.id] = parsePrice(html, MIN_PRICE[coin.id]);
-    } catch (e) {
-      result[coin.id] = null;
-    }
-  }));
+  await Promise.all([
+    // Existing CoinSwitch coins
+    ...COINS.map(async coin => {
+      try {
+        const html = await fetchPage(coin.url);
+        result[coin.id] = parsePrice(html, MIN_PRICE[coin.id]);
+      } catch (e) {
+        result[coin.id] = null;
+      }
+    }),
+    // Bangalore fuel prices
+    fetchBangaloreFuel().then(fuel => {
+      result.petrolBLR = fuel.petrol;
+      result.dieselBLR = fuel.diesel;
+    }),
+  ]);
 
   cache = result;
   cacheTime = Date.now();
