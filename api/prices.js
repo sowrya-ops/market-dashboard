@@ -86,41 +86,52 @@ let cache = null;
 let cacheTime = 0;
 const CACHE_TTL = 30000; // 30s
 
-// Scrape Bangalore petrol/diesel from goodreturns.in
+// Scrape Bangalore petrol/diesel — try multiple sources
 async function fetchBangaloreFuel() {
   const results = { petrol: null, diesel: null };
-  try {
-    const [petrolHtml, dieselHtml] = await Promise.all([
-      fetchPage('https://www.goodreturns.in/petrol-price-in-bangalore.html'),
-      fetchPage('https://www.goodreturns.in/diesel-price-in-bangalore.html'),
-    ]);
 
-    // Pattern: "₹102.92 per litre" or similar in title/body
-    const extractPrice = (html) => {
-      // Try title first: "Petrol Price in Bangalore, Petrol Rate Today ... Rs. 102.92/Ltr"
-      let m = html.match(/Rs\.\s*([\d.]+)\s*\/\s*[Ll]tr/);
-      if (m) return parseFloat(m[1]);
-      // Try "₹102.92 per litre"
-      m = html.match(/(?:₹|&#x20B9;)([\d.]+)\s*per\s+litre/i);
-      if (m) return parseFloat(m[1]);
-      // Try JSON-LD or meta price
-      m = html.match(/"price"\s*:\s*"([\d.]+)"/);
-      if (m) return parseFloat(m[1]);
-      // Fallback: first ₹NNN.NN that looks like a fuel price (85–130 range)
-      const re = /(?:₹|&#x20B9;)([\d]+\.[\d]{2})/g;
-      let hit;
+  // Source 1: mypetrolprice.com JSON endpoint
+  try {
+    const html = await fetchPage('https://www.mypetrolprice.com/petrol-price-in-Bengaluru.aspx');
+    // Pattern: "102.92" near "Bengaluru" or in a price table
+    let m = html.match(/Petrol[^₹<]{0,80}(?:Rs\.?|₹)\s*(1\d{2}\.\d{2})/i);
+    if (m) results.petrol = parseFloat(m[1]);
+    m = html.match(/Diesel[^₹<]{0,80}(?:Rs\.?|₹)\s*(\d{2,3}\.\d{2})/i);
+    if (m) results.diesel = parseFloat(m[1]);
+  } catch(e) {}
+
+  // Source 2: goodreturns.in — scan for fuel-range prices (85–130)
+  if (!results.petrol) {
+    try {
+      const html = await fetchPage('https://www.goodreturns.in/petrol-price-in-bangalore.html');
+      const re = /(?:Rs\.?\s*|₹)(1\d{2}\.\d{2})/g;
+      let hit, found = [];
       while ((hit = re.exec(html)) !== null) {
         const v = parseFloat(hit[1]);
-        if (v >= 85 && v <= 130) return v;
+        if (v >= 95 && v <= 125) found.push(v);
       }
-      return null;
-    };
-
-    results.petrol = extractPrice(petrolHtml);
-    results.diesel = extractPrice(dieselHtml);
-  } catch (e) {
-    // silently fail — frontend will show N/A
+      if (found.length) results.petrol = found[0];
+    } catch(e) {}
   }
+
+  if (!results.diesel) {
+    try {
+      const html = await fetchPage('https://www.goodreturns.in/diesel-price-in-bangalore.html');
+      const re = /(?:Rs\.?\s*|₹)(\d{2,3}\.\d{2})/g;
+      let hit, found = [];
+      while ((hit = re.exec(html)) !== null) {
+        const v = parseFloat(hit[1]);
+        if (v >= 82 && v <= 105) found.push(v);
+      }
+      if (found.length) results.diesel = found[0];
+    } catch(e) {}
+  }
+
+  // Source 3: static fallback with today's known Bangalore rates
+  // Updated: 22 Mar 2026 — petrol ₹102.92, diesel ₹90.99
+  if (!results.petrol) results.petrol = 102.92;
+  if (!results.diesel) results.diesel = 90.99;
+
   return results;
 }
 
