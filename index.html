@@ -360,17 +360,20 @@ async function fetchMarkets(){
     }
   } catch(e){ dset('FX (USD/INR/PHP/IDR)','warn',e.message); }
 
-  // 2b. Metals — gold-api.com (free, CORS open, no key, no rate limit)
+  // 2b. Metals + Crude Oil — gold-api.com (free, CORS open, no key, no rate limit)
   //     GET https://api.gold-api.com/price/XAU → {price, symbol, ...}
   //     GET https://api.gold-api.com/price/XAG → silver
+  //     GET https://api.gold-api.com/price/USOIL → WTI crude
   var goldUSD=null, silverUSD=null;
   try {
-    var [gr, sr] = await Promise.all([
+    var [gr, sr, oilr] = await Promise.all([
       fetch('https://api.gold-api.com/price/XAU',{cache:'no-store'}),
       fetch('https://api.gold-api.com/price/XAG',{cache:'no-store'}),
+      fetch('https://api.gold-api.com/price/USOIL',{cache:'no-store'}).catch(()=>null),
     ]);
     if(gr.ok){ var gd=await gr.json(); goldUSD  = gd.price||gd.ask||null; }
     if(sr.ok){ var sd=await sr.json(); silverUSD= sd.price||sd.ask||null; }
+    if(oilr&&oilr.ok){ var od=await oilr.json(); var oilUSD=od.price||od.ask||null; if(oilUSD&&oilUSD>20){data.crude={price:fmtU(oilUSD,2),change:''};dset('Crude oil (gold-api)','ok','$'+oilUSD);} }
     if(goldUSD){
       data.gold  ={price:fmtU(goldUSD,2),  change:''};
       data.silver={price:fmtU(silverUSD,2), change:''};
