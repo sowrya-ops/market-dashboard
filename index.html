@@ -223,14 +223,14 @@ function buildMarketsDOM(data){
     +'<div class="grid">'+GLOBAL_CARDS.map(function(a){return priceSmall(a,data[a.id]);}).join('')+'</div>'
     +'<div class="sec">Crypto (USD)</div>'
     +'<div class="grid">'+CRYPTO_CARDS.map(function(a){return priceSmall(a,data[a.id]);}).join('')+'</div>'
-    +'<div class="sec">India — Precious Metals</div>'
+    +'<div class="sec">India — Metals &amp; Fuels</div>'
     +'<div class="grid">'+INDIA_CARDS.map(function(a){return priceSmall(a,data[a.id]);}).join('')+'</div>';
 }
 
 function buildMarketsSkeleton(){
   return '<div class="sec">Global Markets</div><div class="grid">'+GLOBAL_CARDS.map(skSmall).join('')+'</div>'
     +'<div class="sec">Crypto (USD)</div><div class="grid">'+CRYPTO_CARDS.map(skSmall).join('')+'</div>'
-    +'<div class="sec">India — Precious Metals</div><div class="grid">'+INDIA_CARDS.map(skSmall).join('')+'</div>';
+    +'<div class="sec">India — Metals &amp; Fuels</div><div class="grid">'+INDIA_CARDS.map(skSmall).join('')+'</div>';
 }
 
 /* ══════════════════════════════════════════════
