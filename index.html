@@ -506,7 +506,7 @@ async function fetchWazirX(){
    FETCH — COINSWITCH (local proxy)
 ══════════════════════════════════════════════ */
 
-async function fetchCoinSwitch(){\
+async function fetchCoinSwitch(){
   dset('CoinSwitch proxy','warn','fetching…');
   var t=Date.now();
   var r=await fetch('/api/prices',{cache:'no-store'});
