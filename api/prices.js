@@ -135,22 +135,33 @@ async function fetchBangaloreFuel() {
   return results;
 }
 
-// Fetch WTI crude oil price from oilprice.com
+// Fetch WTI crude oil price from oilpriceapi.com
 async function fetchCrudeOil() {
   try {
-    const body = await fetchPage('https://oilprice.com/');
-    // Pattern in page: "WTI Crude •1 day |  | 98.23 | +2.68"
-    const m = body.match(/WTI Crude[^|]*\|[^|]*\|\s*([\d.]+)\s*\|/);
-    if (m) {
-      const price = parseFloat(m[1]);
-      if (price > 20 && price < 500) return price;
-    }
-    // Fallback: any number 20-300 near "WTI"
-    const m2 = body.match(/WTI[^<\d]{0,30}([\d]{2,3}\.[\d]{1,2})/);
-    if (m2) {
-      const price = parseFloat(m2[1]);
-      if (price > 20 && price < 500) return price;
-    }
+    const body = await new Promise((resolve, reject) => {
+      const url = new URL('https://api.oilpriceapi.com/v1/prices/latest?by_code=WTI_USD');
+      const req = https.request({
+        hostname: url.hostname,
+        path: url.pathname + url.search,
+        method: 'GET',
+        headers: {
+          'Authorization': 'Token da88faa4680bd4b5bf41df48bd5d82e9e74314748fb345d484236abddddca589',
+          'Content-Type': 'application/json',
+        },
+        timeout: 8000,
+      }, res => {
+        let body = '';
+        res.setEncoding('utf8');
+        res.on('data', c => { body += c; });
+        res.on('end', () => resolve(body));
+      });
+      req.on('error', reject);
+      req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+      req.end();
+    });
+    const d = JSON.parse(body);
+    const price = d?.data?.price;
+    if (price && price > 20) return price;
   } catch(e) {}
   return null;
 }
