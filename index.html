@@ -140,10 +140,10 @@ var CRYPTO_CARDS = [
   {id:'usdc',   name:'USD Coin',sym:'USDC/USD',icon:'<img src="https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/usdc.svg" alt="USDC">', bar:'#378ADD',unit:'stablecoin'},
 ];
 var INDIA_CARDS = [
-  {id:'gold24k',  name:'Gold 24K', sym:'INR 99.9%', icon:'🥇',bar:'#EF9F27',unit:'per gram'},
-  {id:'gold22k',  name:'Gold 22K', sym:'INR 91.6%', icon:'🥇',bar:'#BA7517',unit:'per gram'},
-  {id:'gold18k',  name:'Gold 18K', sym:'INR 75%',   icon:'🥇',bar:'#854F0B',unit:'per gram'},
-  {id:'silverIN', name:'Silver',   sym:'INR 999',   icon:'🥈',bar:'#888780',unit:'per gram'},
+  {id:'gold24k',  name:'Gold 24K', sym:'INR 99.9%', icon:'🥇',bar:'#EF9F27',unit:'per 10g'},
+  {id:'gold22k',  name:'Gold 22K', sym:'INR 91.6%', icon:'🥇',bar:'#BA7517',unit:'per 10g'},
+  {id:'gold18k',  name:'Gold 18K', sym:'INR 75%',   icon:'🥇',bar:'#854F0B',unit:'per 10g'},
+  {id:'silverIN', name:'Silver',   sym:'INR 999',   icon:'🥈',bar:'#888780',unit:'per 10g'},
   {id:'petrolBLR',name:'Petrol',   sym:'Bengaluru', icon:'⛽',bar:'#E05C2A',unit:'per litre'},
   {id:'dieselBLR',name:'Diesel',   sym:'Bengaluru', icon:'🛢️',bar:'#4A7C59',unit:'per litre'},
 ];
@@ -407,10 +407,10 @@ async function fetchMarkets(){
     // India retail = spot × ~1.0375 (6% import duty + GST + making, calibrated to live rates)
     var indiaFactor = 1.0375;
     var g24 = goldUSD/TROY*usdInrV*indiaFactor;
-    data.gold24k={price:fmtI(g24*0.999,2),change:''};
-    data.gold22k={price:fmtI(g24*0.916,2),change:''};
-    data.gold18k={price:fmtI(g24*0.750,2),change:''};
-    if(silverUSD) data.silverIN={price:fmtI(silverUSD/TROY*usdInrV*1.03,2),change:''};
+    data.gold24k={price:fmtI(g24*0.999*10,2),change:''};
+    data.gold22k={price:fmtI(g24*0.916*10,2),change:''};
+    data.gold18k={price:fmtI(g24*0.750*10,2),change:''};
+    if(silverUSD) data.silverIN={price:fmtI(silverUSD/TROY*usdInrV*1.159*10,2),change:''};
     dset('Gold INR (derived)','ok','₹'+Math.round(g24)+'/g');
   }
 
@@ -545,10 +545,10 @@ async function fetchCoinSwitch(){
   var inrFmt = function(n){return n!=null?'₹'+Number(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}):null;};
   if(data.gold24k && data.gold24k>1000){
     window._indianGold = {
-      gold24k:{price:inrFmt(data.gold24k),change:''},
-      gold22k:{price:inrFmt(data.gold22k),change:''},
-      gold18k:{price:inrFmt(data.gold18k),change:''},
-      silverIN: data.silverIN ? {price:inrFmt(data.silverIN),change:''} : null,
+      gold24k:{price:inrFmt(data.gold24k*10),change:''},
+      gold22k:{price:inrFmt(data.gold22k*10),change:''},
+      gold18k:{price:inrFmt(data.gold18k*10),change:''},
+      silverIN: data.silverIN ? {price:inrFmt(data.silverIN*10),change:''} : null,
     };
     dset('Gold INR (goodreturns)','ok','₹'+data.gold24k+'/g 24K');
   }
