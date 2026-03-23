@@ -399,14 +399,32 @@ async function fetchMarkets(){
   if(!data.crude){ data.crude={price:fmtU(98.98,2),change:''}; dset('Crude oil','ok','hardcoded $98.98'); }
 
 
-  // 2d. Derive India metals from gold/silver USD + USD/INR
-  if(goldUSD && usdInrV){
-    var TROY=31.1035;
-    data.gold24k ={price:fmtI(goldUSD/TROY*usdInrV*0.999,2),change:''};
-    data.gold22k ={price:fmtI(goldUSD/TROY*usdInrV*0.916,2),change:''};
-    data.gold18k ={price:fmtI(goldUSD/TROY*usdInrV*0.750,2),change:''};
-    if(silverUSD) data.silverIN={price:fmtI(silverUSD/TROY*usdInrV,2),change:''};
-  }
+  // 2d. India metals — fetch gold price directly in INR from gold-api.com
+  try {
+    var [ginr, sinr] = await Promise.all([
+      fetch('https://api.gold-api.com/price/XAU/INR',{cache:'no-store'}).catch(()=>null),
+      fetch('https://api.gold-api.com/price/XAG/INR',{cache:'no-store'}).catch(()=>null),
+    ]);
+    var goldINR=null, silverINR=null;
+    if(ginr&&ginr.ok){ var gid=await ginr.json(); goldINR=gid.price||gid.ask||null; }
+    if(sinr&&sinr.ok){ var sid=await sinr.json(); silverINR=sid.price||sid.ask||null; }
+    if(goldINR && goldINR>1000){
+      var TROY=31.1035;
+      data.gold24k ={price:fmtI(goldINR/TROY*0.999,2),change:''};
+      data.gold22k ={price:fmtI(goldINR/TROY*0.916,2),change:''};
+      data.gold18k ={price:fmtI(goldINR/TROY*0.750,2),change:''};
+      if(silverINR) data.silverIN={price:fmtI(silverINR/TROY,2),change:''};
+      dset('Gold INR (direct)','ok','₹'+Math.round(goldINR/TROY)+'/g');
+    } else if(goldUSD && usdInrV){
+      // fallback: derive from USD price
+      var TROY=31.1035;
+      data.gold24k ={price:fmtI(goldUSD/TROY*usdInrV*0.999,2),change:''};
+      data.gold22k ={price:fmtI(goldUSD/TROY*usdInrV*0.916,2),change:''};
+      data.gold18k ={price:fmtI(goldUSD/TROY*usdInrV*0.750,2),change:''};
+      if(silverUSD) data.silverIN={price:fmtI(silverUSD/TROY*usdInrV,2),change:''};
+      dset('Gold INR (derived)','ok','₹'+Math.round(goldUSD/TROY*usdInrV)+'/g');
+    }
+  } catch(e){ dset('Gold INR','fail',e.message); }
 
   return data;
 }
