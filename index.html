@@ -404,11 +404,14 @@ async function fetchMarkets(){
   // fallback: derive from USD spot if serverless values missing
   if(goldUSD && usdInrV && !data.gold24k){
     var TROY=31.1035;
-    data.gold24k={price:fmtI(goldUSD/TROY*usdInrV*0.999,2),change:''};
-    data.gold22k={price:fmtI(goldUSD/TROY*usdInrV*0.916,2),change:''};
-    data.gold18k={price:fmtI(goldUSD/TROY*usdInrV*0.750,2),change:''};
-    if(silverUSD) data.silverIN={price:fmtI(silverUSD/TROY*usdInrV,2),change:''};
-    dset('Gold INR (derived)','ok','₹'+Math.round(goldUSD/TROY*usdInrV)+'/g');
+    // India retail = spot × ~1.0375 (6% import duty + GST + making, calibrated to live rates)
+    var indiaFactor = 1.0375;
+    var g24 = goldUSD/TROY*usdInrV*indiaFactor;
+    data.gold24k={price:fmtI(g24*0.999,2),change:''};
+    data.gold22k={price:fmtI(g24*0.916,2),change:''};
+    data.gold18k={price:fmtI(g24*0.750,2),change:''};
+    if(silverUSD) data.silverIN={price:fmtI(silverUSD/TROY*usdInrV*1.03,2),change:''};
+    dset('Gold INR (derived)','ok','₹'+Math.round(g24)+'/g');
   }
 
   return data;
