@@ -399,32 +399,17 @@ async function fetchMarkets(){
   if(!data.crude){ data.crude={price:fmtU(98.98,2),change:''}; dset('Crude oil','ok','hardcoded $98.98'); }
 
 
-  // 2d. India metals — fetch gold price directly in INR from gold-api.com
-  try {
-    var [ginr, sinr] = await Promise.all([
-      fetch('https://api.gold-api.com/price/XAU/INR',{cache:'no-store'}).catch(()=>null),
-      fetch('https://api.gold-api.com/price/XAG/INR',{cache:'no-store'}).catch(()=>null),
-    ]);
-    var goldINR=null, silverINR=null;
-    if(ginr&&ginr.ok){ var gid=await ginr.json(); goldINR=gid.price||gid.ask||null; }
-    if(sinr&&sinr.ok){ var sid=await sinr.json(); silverINR=sid.price||sid.ask||null; }
-    if(goldINR && goldINR>1000){
-      var TROY=31.1035;
-      data.gold24k ={price:fmtI(goldINR/TROY*0.999,2),change:''};
-      data.gold22k ={price:fmtI(goldINR/TROY*0.916,2),change:''};
-      data.gold18k ={price:fmtI(goldINR/TROY*0.750,2),change:''};
-      if(silverINR) data.silverIN={price:fmtI(silverINR/TROY,2),change:''};
-      dset('Gold INR (direct)','ok','₹'+Math.round(goldINR/TROY)+'/g');
-    } else if(goldUSD && usdInrV){
-      // fallback: derive from USD price
-      var TROY=31.1035;
-      data.gold24k ={price:fmtI(goldUSD/TROY*usdInrV*0.999,2),change:''};
-      data.gold22k ={price:fmtI(goldUSD/TROY*usdInrV*0.916,2),change:''};
-      data.gold18k ={price:fmtI(goldUSD/TROY*usdInrV*0.750,2),change:''};
-      if(silverUSD) data.silverIN={price:fmtI(silverUSD/TROY*usdInrV,2),change:''};
-      dset('Gold INR (derived)','ok','₹'+Math.round(goldUSD/TROY*usdInrV)+'/g');
-    }
-  } catch(e){ dset('Gold INR','fail',e.message); }
+  // 2d. India metals — from serverless /api/prices (scraped from goodreturns.in)
+  // picked up after fetchCoinSwitch resolves (same /api/prices call)
+  // fallback: derive from USD spot if serverless values missing
+  if(goldUSD && usdInrV && !data.gold24k){
+    var TROY=31.1035;
+    data.gold24k={price:fmtI(goldUSD/TROY*usdInrV*0.999,2),change:''};
+    data.gold22k={price:fmtI(goldUSD/TROY*usdInrV*0.916,2),change:''};
+    data.gold18k={price:fmtI(goldUSD/TROY*usdInrV*0.750,2),change:''};
+    if(silverUSD) data.silverIN={price:fmtI(silverUSD/TROY*usdInrV,2),change:''};
+    dset('Gold INR (derived)','ok','₹'+Math.round(goldUSD/TROY*usdInrV)+'/g');
+  }
 
   return data;
 }
@@ -553,6 +538,17 @@ async function fetchCoinSwitch(){
     window._crudeUSD = data.crudeUSD;
     dset('Crude oil (serverless)','ok','$'+data.crudeUSD);
   }
+  // Indian gold & silver per gram from goodreturns.in scrape
+  var inrFmt = function(n){return n!=null?'₹'+Number(n).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}):null;};
+  if(data.gold24k && data.gold24k>1000){
+    window._indianGold = {
+      gold24k:{price:inrFmt(data.gold24k),change:''},
+      gold22k:{price:inrFmt(data.gold22k),change:''},
+      gold18k:{price:inrFmt(data.gold18k),change:''},
+      silverIN: data.silverIN ? {price:inrFmt(data.silverIN),change:''} : null,
+    };
+    dset('Gold INR (goodreturns)','ok','₹'+data.gold24k+'/g 24K');
+  }
 }
 
 /* ══════════════════════════════════════════════
@@ -581,6 +577,12 @@ async function fetchAll(){
     if(window._fuelData){
       if(window._fuelData.petrolBLR) d.petrolBLR=window._fuelData.petrolBLR;
       if(window._fuelData.dieselBLR) d.dieselBLR=window._fuelData.dieselBLR;
+    }
+    if(window._indianGold){
+      if(window._indianGold.gold24k) d.gold24k=window._indianGold.gold24k;
+      if(window._indianGold.gold22k) d.gold22k=window._indianGold.gold22k;
+      if(window._indianGold.gold18k) d.gold18k=window._indianGold.gold18k;
+      if(window._indianGold.silverIN) d.silverIN=window._indianGold.silverIN;
     }
     document.getElementById('markets').innerHTML=buildMarketsDOM(d);
   }

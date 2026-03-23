@@ -135,6 +135,41 @@ async function fetchBangaloreFuel() {
   return results;
 }
 
+// Fetch Indian gold price per gram (Bangalore) from goodreturns.in
+async function fetchIndianGold() {
+  const results = { gold24k: null, gold22k: null, gold18k: null, silverIN: null };
+  try {
+    const html = await fetchPage('https://www.goodreturns.in/gold-rates-in-bangalore.html');
+    // Pattern: 24K gold per gram price (range 8000-20000)
+    const re = /(?:Rs\.?\s*|₹|&#x20B9;)([\d,]+(?:\.\d+)?)/g;
+    let hit, found = [];
+    while ((hit = re.exec(html)) !== null) {
+      const v = parseFloat(hit[1].replace(/,/g,''));
+      if (v >= 8000 && v <= 25000) found.push(v);
+    }
+    // The page lists 1g and 8g/10g prices — take the smallest (1g)
+    if (found.length) {
+      found.sort((a,b)=>a-b);
+      const g24 = found[0];
+      results.gold24k = g24;
+      results.gold22k = Math.round(g24 * 0.916 * 100) / 100;
+      results.gold18k = Math.round(g24 * 0.750 * 100) / 100;
+    }
+  } catch(e) {}
+  // Silver per gram from goodreturns
+  try {
+    const html = await fetchPage('https://www.goodreturns.in/silver-rates-in-bangalore.html');
+    const re = /(?:Rs\.?\s*|₹|&#x20B9;)([\d,]+(?:\.\d+)?)/g;
+    let hit, found = [];
+    while ((hit = re.exec(html)) !== null) {
+      const v = parseFloat(hit[1].replace(/,/g,''));
+      if (v >= 80 && v <= 400) found.push(v);
+    }
+    if (found.length) { found.sort((a,b)=>a-b); results.silverIN = found[0]; }
+  } catch(e) {}
+  return results;
+}
+
 // Fetch WTI crude oil price from oilpriceapi.com
 async function fetchCrudeOil() {
   try {
@@ -197,9 +232,16 @@ export default async function handler(req, res) {
       result.petrolBLR = fuel.petrol;
       result.dieselBLR = fuel.diesel;
     }),
-    // Crude oil via Yahoo Finance server-side
+    // Crude oil
     fetchCrudeOil().then(price => {
       result.crudeUSD = price;
+    }),
+    // Indian gold & silver per gram (Bangalore)
+    fetchIndianGold().then(g => {
+      result.gold24k = g.gold24k;
+      result.gold22k = g.gold22k;
+      result.gold18k = g.gold18k;
+      result.silverIN = g.silverIN;
     }),
   ]);
 
