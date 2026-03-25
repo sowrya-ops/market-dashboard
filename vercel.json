@@ -1,23 +1,18 @@
 {
   "version": 2,
   "builds": [
-    {
-      "src": "api/prices.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "index.html",
-      "use": "@vercel/static"
-    }
+    { "src": "api/prices.js", "use": "@vercel/node" },
+    { "src": "index.html", "use": "@vercel/static" },
+    { "src": "manifest.json", "use": "@vercel/static" },
+    { "src": "sw.js", "use": "@vercel/static" },
+    { "src": "icon-*.png", "use": "@vercel/static" }
   ],
   "routes": [
-    {
-      "src": "/api/prices",
-      "dest": "/api/prices.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
+    { "src": "/api/prices", "dest": "/api/prices.js" },
+    { "src": "/manifest.json", "dest": "/manifest.json" },
+    { "src": "/sw.js", "dest": "/sw.js" },
+    { "src": "/icon-192.png", "dest": "/icon-192.png" },
+    { "src": "/icon-512.png", "dest": "/icon-512.png" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
