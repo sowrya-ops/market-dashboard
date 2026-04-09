@@ -264,6 +264,7 @@ function skExc(e){
 
 function buildExcCard(e,d,isBest,dec){
   var ch=d.change!=null?parseFloat(d.change):null;
+  if(ch!=null&&isNaN(ch))ch=null;
   var cls=ch==null?'':ch>=0?'up':'dn';
   var chStr=ch==null?'—':(ch>=0?'▲ ':'▼ ')+Math.abs(ch).toFixed(2)+'%';
   return '<div class="exc-card'+(isBest?' best':'')+'"><div class="exc-bar" style="background:'+e.bar+'"></div>'
@@ -431,13 +432,13 @@ async function fetchMarkets(){
 async function fetchCoinDCX(){
   dset('CoinDCX','warn','fetching…');
   var t=Date.now();
-  var r=await fetch('https://api.coindcx.com/exchange/ticker',{cache:'no-store'});
+  var r=await fetch('https://public.coindcx.com/market_data/ticker',{cache:'no-store'});
   if(!r.ok) throw new Error('HTTP '+r.status);
   var data=await r.json();
   dset('CoinDCX','ok',(Date.now()-t)+'ms');
   COINS.forEach(function(c){
     var item=data.find(function(t){return t.market===c.cdxMarket;});
-    if(item) exc[c.id].coindcx={last:item.last_price,bid:item.bid,ask:item.ask,change:item.change_24_hour};
+    if(item) exc[c.id].coindcx={last:parseFloat(item.last_price),bid:parseFloat(item.bid),ask:parseFloat(item.ask),change:parseFloat(item.change_24_hour)};
   });
 }
 
@@ -509,7 +510,7 @@ async function fetchWazirX(){
   dset('WazirX','ok',(Date.now()-t)+'ms · '+data.length+' pairs');
   COINS.forEach(function(c){
     var d=map[c.id.toLowerCase()+'inr'];
-    if(d) exc[c.id].wazirx={last:parseFloat(d.lastPrice),bid:parseFloat(d.bidPrice),ask:parseFloat(d.askPrice),change:parseFloat(d.priceChangePercent)};
+    if(d){var pct=d.priceChangePercent!=null?parseFloat(d.priceChangePercent):null;exc[c.id].wazirx={last:parseFloat(d.lastPrice)||null,bid:parseFloat(d.bidPrice)||null,ask:parseFloat(d.askPrice)||null,change:(pct!=null&&!isNaN(pct))?pct:null};}
   });
 }
 
