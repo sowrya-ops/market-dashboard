@@ -508,6 +508,9 @@ async function fetchWazirX(){
   var map={};
   data.forEach(function(t){map[t.symbol]=t;});
   dset('WazirX','ok',(Date.now()-t)+'ms · '+data.length+' pairs');
+  // DEBUG: log the btcinr entry so we can see exact field names
+  var debugWzx=map['btcinr'];
+  console.log('WazirX btcinr raw entry:', JSON.stringify(debugWzx));
   COINS.forEach(function(c){
     var d=map[c.id.toLowerCase()+'inr'];
     if(d){var pct=d.priceChangePercent!=null?parseFloat(d.priceChangePercent):null;exc[c.id].wazirx={last:parseFloat(d.lastPrice)||null,bid:parseFloat(d.bidPrice)||null,ask:parseFloat(d.askPrice)||null,change:(pct!=null&&!isNaN(pct))?pct:null};}
