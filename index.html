@@ -432,7 +432,7 @@ async function fetchMarkets(){
 async function fetchCoinDCX(){
   dset('CoinDCX','warn','fetching…');
   var t=Date.now();
-  var r=await fetch('https://public.coindcx.com/market_data/ticker',{cache:'no-store'});
+  var r=await fetch('https://api.coindcx.com/exchange/ticker',{cache:'no-store'});
   if(!r.ok) throw new Error('HTTP '+r.status);
   var data=await r.json();
   dset('CoinDCX','ok',(Date.now()-t)+'ms');
@@ -508,12 +508,15 @@ async function fetchWazirX(){
   var map={};
   data.forEach(function(t){map[t.symbol]=t;});
   dset('WazirX','ok',(Date.now()-t)+'ms · '+data.length+' pairs');
-  // DEBUG: log the btcinr entry so we can see exact field names
-  var debugWzx=map['btcinr'];
-  console.log('WazirX btcinr raw entry:', JSON.stringify(debugWzx));
   COINS.forEach(function(c){
     var d=map[c.id.toLowerCase()+'inr'];
-    if(d){var pct=d.priceChangePercent!=null?parseFloat(d.priceChangePercent):null;exc[c.id].wazirx={last:parseFloat(d.lastPrice)||null,bid:parseFloat(d.bidPrice)||null,ask:parseFloat(d.askPrice)||null,change:(pct!=null&&!isNaN(pct))?pct:null};}
+    if(d){
+      var last=parseFloat(d.lastPrice)||null;
+      var open=parseFloat(d.openPrice)||null;
+      // calculate % change from openPrice since priceChangePercent was removed from API
+      var pct=(last&&open&&open>0)?((last-open)/open*100):null;
+      exc[c.id].wazirx={last:last,bid:parseFloat(d.bidPrice)||null,ask:parseFloat(d.askPrice)||null,change:pct};
+    }
   });
 }
 
