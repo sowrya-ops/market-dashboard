@@ -330,7 +330,7 @@ async function fetchMarkets(){
   // 1. WazirX for BTC/ETH/USDT/USDC in USD (use global prices from CoinGecko-style)
   // We already have USD prices from WazirX INR + USD/INR rate — instead use CoinGecko
   try {
-    var r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,binancecoin,tether,usd-coin&vs_currencies=usd&include_24hr_change=true&_='+Date.now(),{cache:'no-store',headers:{'Cache-Control':'no-cache'}});
+    var r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,binancecoin,tether,usd-coin&vs_currencies=usd&include_24hr_change=true',{cache:'no-store'});
     if(r.ok){
       var cg=await r.json();
       function fmtUSD(n,d){return n!=null?'$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}):null;}
@@ -432,18 +432,37 @@ async function fetchMarkets(){
 async function fetchCoinDCX(){
   dset('CoinDCX','warn','fetching…');
   var t=Date.now();
-  var cb='?_='+Date.now();
-  var r=await fetch('https://api.coindcx.com/exchange/ticker'+cb,{
-    cache:'no-store',
-    headers:{'Cache-Control':'no-cache','Pragma':'no-cache'}
-  });
-  if(!r.ok) throw new Error('HTTP '+r.status);
-  var data=await r.json();
+  // Fetch individual market orderbook for live bid/ask, plus candle for last price
+  await Promise.all(COINS.map(async function(c){
+    try{
+      // Use orderbook endpoint for live bid/ask
+      var ob=await fetch('https://api.coindcx.com/market_data/orderbook?pair='+c.cdxMarket,{cache:'no-store'});
+      if(ob.ok){
+        var obd=await ob.json();
+        var bid=obd.bids&&obd.bids[0]?parseFloat(obd.bids[0][0]):null;
+        var ask=obd.asks&&obd.asks[0]?parseFloat(obd.asks[0][0]):null;
+        var last=ask||bid||null;
+        if(last) exc[c.id].coindcx={last:last,bid:bid,ask:ask,change:null};
+      }
+    }catch(e){}
+  }));
+  // Also try ticker for change %
+  try{
+    var tr=await fetch('https://api.coindcx.com/exchange/ticker?_='+Date.now(),{cache:'no-store'});
+    if(tr.ok){
+      var td=await tr.json();
+      COINS.forEach(function(c){
+        var item=td.find(function(t){return t.market===c.cdxMarket;});
+        if(item){
+          var lp=parseFloat(item.last_price);
+          // Only use ticker last_price if orderbook failed
+          if(!exc[c.id].coindcx||!exc[c.id].coindcx.last) exc[c.id].coindcx={last:lp,bid:parseFloat(item.bid),ask:parseFloat(item.ask),change:parseFloat(item.change_24_hour)};
+          else exc[c.id].coindcx.change=parseFloat(item.change_24_hour);
+        }
+      });
+    }
+  }catch(e){}
   dset('CoinDCX','ok',(Date.now()-t)+'ms');
-  COINS.forEach(function(c){
-    var item=data.find(function(t){return t.market===c.cdxMarket;});
-    if(item) exc[c.id].coindcx={last:parseFloat(item.last_price),bid:parseFloat(item.bid),ask:parseFloat(item.ask),change:parseFloat(item.change_24_hour)};
-  });
 }
 
 /* ══════════════════════════════════════════════
@@ -506,26 +525,21 @@ function fetchZebPay(){
 async function fetchWazirX(){
   dset('WazirX','warn','fetching…');
   var t=Date.now();
-  var cb='?_='+Date.now();
-  var r=await fetch('https://api.wazirx.com/sapi/v1/tickers/24hr'+cb,{
-    cache:'no-store',
-    headers:{'Cache-Control':'no-cache','Pragma':'no-cache'}
-  });
-  if(!r.ok) throw new Error('HTTP '+r.status);
-  var data=await r.json();
-  var map={};
-  data.forEach(function(t){map[t.symbol]=t;});
-  dset('WazirX','ok',(Date.now()-t)+'ms · '+data.length+' pairs');
-  COINS.forEach(function(c){
-    var d=map[c.id.toLowerCase()+'inr'];
-    if(d){
-      var last=parseFloat(d.lastPrice)||null;
-      var open=parseFloat(d.openPrice)||null;
-      // calculate % change from openPrice since priceChangePercent was removed from API
-      var pct=(last&&open&&open>0)?((last-open)/open*100):null;
-      exc[c.id].wazirx={last:last,bid:parseFloat(d.bidPrice)||null,ask:parseFloat(d.askPrice)||null,change:pct};
-    }
-  });
+  // Fetch individual ticker per coin for freshest data
+  await Promise.all(COINS.map(async function(c){
+    try{
+      var sym=c.id.toLowerCase()+'inr';
+      var r=await fetch('https://api.wazirx.com/sapi/v1/ticker/24hr?symbol='+sym+'&_='+Date.now(),{cache:'no-store'});
+      if(r.ok){
+        var d=await r.json();
+        var last=parseFloat(d.lastPrice)||null;
+        var open=parseFloat(d.openPrice)||null;
+        var pct=(last&&open&&open>0)?((last-open)/open*100):null;
+        if(last) exc[c.id].wazirx={last:last,bid:parseFloat(d.bidPrice)||null,ask:parseFloat(d.askPrice)||null,change:pct};
+      }
+    }catch(e){}
+  }));
+  dset('WazirX','ok',(Date.now()-t)+'ms');
 }
 
 /* ══════════════════════════════════════════════
