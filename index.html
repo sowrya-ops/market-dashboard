@@ -432,32 +432,33 @@ async function fetchMarkets(){
 async function fetchCoinDCX(){
   dset('CoinDCX','warn','fetching…');
   var t=Date.now();
-  // Fetch individual market orderbook for live bid/ask, plus candle for last price
-  await Promise.all(COINS.map(async function(c){
+  // Use orderbook for live bid/ask prices (ticker endpoint returns stale data)
+  var results=await Promise.all(COINS.map(async function(c){
     try{
-      // Use orderbook endpoint for live bid/ask
-      var ob=await fetch('https://api.coindcx.com/market_data/orderbook?pair='+c.cdxMarket,{cache:'no-store'});
-      if(ob.ok){
-        var obd=await ob.json();
-        var bid=obd.bids&&obd.bids[0]?parseFloat(obd.bids[0][0]):null;
-        var ask=obd.asks&&obd.asks[0]?parseFloat(obd.asks[0][0]):null;
-        var last=ask||bid||null;
-        if(last) exc[c.id].coindcx={last:last,bid:bid,ask:ask,change:null};
+      var r=await fetch('https://api.coindcx.com/market_data/orderbook?pair='+c.cdxMarket+'&_='+Date.now(),{cache:'no-store'});
+      if(r.ok){
+        var d=await r.json();
+        var bid=d.bids&&d.bids[0]?parseFloat(d.bids[0][0]):null;
+        var ask=d.asks&&d.asks[0]?parseFloat(d.asks[0][0]):null;
+        if(bid||ask){ exc[c.id].coindcx={last:ask||bid,bid:bid,ask:ask,change:null}; return true; }
       }
     }catch(e){}
+    return false;
   }));
-  // Also try ticker for change %
+  // Fallback to ticker for any that failed + get change %
   try{
     var tr=await fetch('https://api.coindcx.com/exchange/ticker?_='+Date.now(),{cache:'no-store'});
     if(tr.ok){
       var td=await tr.json();
       COINS.forEach(function(c){
-        var item=td.find(function(t){return t.market===c.cdxMarket;});
+        var item=td.find(function(x){return x.market===c.cdxMarket;});
         if(item){
-          var lp=parseFloat(item.last_price);
-          // Only use ticker last_price if orderbook failed
-          if(!exc[c.id].coindcx||!exc[c.id].coindcx.last) exc[c.id].coindcx={last:lp,bid:parseFloat(item.bid),ask:parseFloat(item.ask),change:parseFloat(item.change_24_hour)};
-          else exc[c.id].coindcx.change=parseFloat(item.change_24_hour);
+          if(!exc[c.id].coindcx||!exc[c.id].coindcx.last){
+            exc[c.id].coindcx={last:parseFloat(item.last_price),bid:parseFloat(item.bid),ask:parseFloat(item.ask),change:parseFloat(item.change_24_hour)};
+          } else {
+            exc[c.id].coindcx.change=parseFloat(item.change_24_hour);
+          }
+          dset('CoinDCX '+c.id.toUpperCase(),'ok','₹'+exc[c.id].coindcx.last);
         }
       });
     }
@@ -525,7 +526,7 @@ function fetchZebPay(){
 async function fetchWazirX(){
   dset('WazirX','warn','fetching…');
   var t=Date.now();
-  // Fetch individual ticker per coin for freshest data
+  // Fetch per-symbol ticker for freshest price (bulk endpoint can be stale)
   await Promise.all(COINS.map(async function(c){
     try{
       var sym=c.id.toLowerCase()+'inr';
@@ -535,9 +536,12 @@ async function fetchWazirX(){
         var last=parseFloat(d.lastPrice)||null;
         var open=parseFloat(d.openPrice)||null;
         var pct=(last&&open&&open>0)?((last-open)/open*100):null;
-        if(last) exc[c.id].wazirx={last:last,bid:parseFloat(d.bidPrice)||null,ask:parseFloat(d.askPrice)||null,change:pct};
+        if(last){
+          exc[c.id].wazirx={last:last,bid:parseFloat(d.bidPrice)||null,ask:parseFloat(d.askPrice)||null,change:pct};
+          dset('WazirX '+c.id.toUpperCase(),'ok','₹'+last);
+        }
       }
-    }catch(e){}
+    }catch(e){ dset('WazirX '+c.id.toUpperCase(),'fail',e.message); }
   }));
   dset('WazirX','ok',(Date.now()-t)+'ms');
 }
