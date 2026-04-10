@@ -330,7 +330,7 @@ async function fetchMarkets(){
   // 1. WazirX for BTC/ETH/USDT/USDC in USD (use global prices from CoinGecko-style)
   // We already have USD prices from WazirX INR + USD/INR rate — instead use CoinGecko
   try {
-    var r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,binancecoin,tether,usd-coin&vs_currencies=usd&include_24hr_change=true',{cache:'no-store'});
+    var r=await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,binancecoin,tether,usd-coin&vs_currencies=usd&include_24hr_change=true&_='+Date.now(),{cache:'no-store',headers:{'Cache-Control':'no-cache'}});
     if(r.ok){
       var cg=await r.json();
       function fmtUSD(n,d){return n!=null?'$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}):null;}
@@ -432,7 +432,11 @@ async function fetchMarkets(){
 async function fetchCoinDCX(){
   dset('CoinDCX','warn','fetching…');
   var t=Date.now();
-  var r=await fetch('https://api.coindcx.com/exchange/ticker',{cache:'no-store'});
+  var cb='?_='+Date.now();
+  var r=await fetch('https://api.coindcx.com/exchange/ticker'+cb,{
+    cache:'no-store',
+    headers:{'Cache-Control':'no-cache','Pragma':'no-cache'}
+  });
   if(!r.ok) throw new Error('HTTP '+r.status);
   var data=await r.json();
   dset('CoinDCX','ok',(Date.now()-t)+'ms');
@@ -502,7 +506,11 @@ function fetchZebPay(){
 async function fetchWazirX(){
   dset('WazirX','warn','fetching…');
   var t=Date.now();
-  var r=await fetch('https://api.wazirx.com/sapi/v1/tickers/24hr',{cache:'no-store'});
+  var cb='?_='+Date.now();
+  var r=await fetch('https://api.wazirx.com/sapi/v1/tickers/24hr'+cb,{
+    cache:'no-store',
+    headers:{'Cache-Control':'no-cache','Pragma':'no-cache'}
+  });
   if(!r.ok) throw new Error('HTTP '+r.status);
   var data=await r.json();
   var map={};
